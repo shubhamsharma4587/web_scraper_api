@@ -15,18 +15,29 @@ class YCScraperService
   def scrape_companies
     companies = []
     page = 1
+    company_scraping_error = false
 
-    while companies.size < @n
+    while companies.size < @n && !company_scraping_error
       url = build_url(page)
       @driver.get(url)
       wait_for_element('//a[contains(@class, "_company_")]')
-      company_cards = @driver.find_elements(xpath: '//a[contains(@class, "_company_")]')
-      company_cards.each do |company_card|
-        company = parse_company_card(company_card)
-        company_details = fetch_company_details(company[:details_url], company[:name])
-        companies << company.merge(company_details)
 
-        break if companies.size >= @n
+      begin
+        company_cards = @driver.find_elements(xpath: '//a[contains(@class, "_company_")]')
+        unless company_cards.empty?
+          company_cards.each do |company_card|
+            company = parse_company_card(company_card)
+            company_details = fetch_company_details(company[:details_url], company[:name])
+            companies << company.merge(company_details)
+
+            break if companies.size >= @n
+          end
+        else
+          break
+        end
+      rescue StandardError => e
+        puts "Error: #{e.message}"
+        company_scraping_error = true
       end
 
       page += 1
@@ -61,7 +72,7 @@ class YCScraperService
     }
   end
 
-  def fetch_company_details(url,name)
+  def fetch_company_details(url, name)
     @driver.get(url)
     wait_for_element("//h1[contains(text(), '#{name}')]")
 
@@ -77,7 +88,6 @@ class YCScraperService
       Selenium::WebDriver::Wait.new(timeout: timeout).until { @driver.find_element(xpath: xpath) }
     rescue Exception => ex
       puts "Exception: #{ex.to_s}"
-      @driver.quit
     end
   end
 end

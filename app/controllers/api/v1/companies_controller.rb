@@ -28,7 +28,7 @@ class Api::V1::CompaniesController < ApplicationController
           company[:founders].join(', '),
           company[:linkedin_urls].join(', ')
         ]
-      end
+      end if companies.present?
     end
   end
 end
